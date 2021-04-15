@@ -12,8 +12,11 @@ import win32com
 import win32com.client
 import docx
 from docx import Document
+import argparse
 
 # from util import doc2docx
+cmd_opt = argparse.ArgumentParser(description='check')
+cmd_opt.add_argument('-save_dir', default='.', help='result output root')
 
 
 def find_footer(h):
