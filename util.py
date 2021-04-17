@@ -51,9 +51,9 @@ def find_page_number(pdf_file, keyword):
 
 if __name__ == '__main__':
     # 这里只能使用完整绝对地址，相对地址找不到文件，且，只能用“\\”，不能用“/”，哪怕加了 r 也不行，涉及到将反斜杠看成转义字符。
-    doc_path = r'W:\hw\paper\硕士学位论文正文_1.doc'
-    docx_path = r'W:\hw\paper\硕士学位论文正文_1.docx'
-    pdf_path = r'W:\hw\paper\硕士学位论文正文_1.pdf'
+    doc_path = r'W:\ZJU\课程\春学期\写作指导\作业\hw\paper\硕士学位论文正文_1.doc'
+    docx_path = r'W:\ZJU\课程\春学期\写作指导\作业\hw\paper\硕士学位论文正文_1.docx'
+    pdf_path = r'W:\ZJU\课程\春学期\写作指导\作业\hw\paper\硕士学位论文正文_1.pdf'
     # doc2docx(doc_path, docx_path)
     # for p in docx_file.paragraphs:
     #     print(p.text)
