@@ -33,7 +33,7 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         # 窗口在屏幕上显示，并设置了它的尺寸。resize()和remove()合而为一的方法。
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setWindowIcon(QIcon(r'W:\ZJU\课程\春学期\写作指导\作业\hw\pic\zju_icon.jpg'))  # 创建一个QIcon对象并接收一个我们要显示的图片路径作为参数。
+        self.setWindowIcon(QIcon(r'W:\ZJU\课程\春学期\写作指导\作业\hw\pic\paper.png'))  # 创建一个QIcon对象并接收一个我们要显示的图片路径作为参数。
 
         # open button
         self.open_btn = QPushButton('Open', self)
@@ -45,6 +45,7 @@ class MainWindow(QWidget):
         # test button
         self.check_btn = QPushButton('Check', self)
         self.check_btn.clicked.connect(self.check_slot_method)
+        self.check_btn.setToolTip('Click <b>Check</b> to check the paper')
         # self.check_btn.resize(self.check_btn.sizeHint())
         # self.check_btn.move(150, 220)
         self.check_btn.setEnabled(False)
@@ -52,6 +53,7 @@ class MainWindow(QWidget):
         # clean button
         self.clear_btn = QPushButton('Clear', self)
         self.clear_btn.clicked.connect(self.clear_slot_method)
+        self.clear_btn.setToolTip('Click <b>Clear</b> to clear the textbox')
 
         self.textbox = QTextEdit(self)
         self.textbox.setReadOnly(True)
