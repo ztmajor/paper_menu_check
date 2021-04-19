@@ -80,8 +80,10 @@ class MainWindow(QWidget):
         self.temp_pdf_path = doc_file.replace('.doc', '.pdf')
         self.textbox.append(f'Open {doc_file}')
         self.print_log('processing...')
+        self.remove_temp_files()
+        self.check_btn.setEnabled(False)
         try:
-            doc2docx(doc_file, self.temp_docx_path)
+            # doc2docx(doc_file, self.temp_docx_path)
             doc2pdf(doc_file, self.temp_pdf_path)
             self.print_log('processing complete.')
             self.check_btn.setEnabled(True)
@@ -100,13 +102,12 @@ class MainWindow(QWidget):
             print('let us check!')
 
             # TODO: doing sth
-            msg_list = find_page_number(self.temp_pdf_path, '图 2')
+            msg_list = check_catalog(self.temp_pdf_path, '图')
+            msg_list += check_catalog(self.temp_pdf_path, '表')
             for msg in msg_list:
                 self.print_log(str(msg))
             self.print_log('check complete.')
 
-            os.remove(self.temp_docx_path)
-            os.remove(self.temp_pdf_path)
         elif reply == QMessageBox.No:
             print('do not check')
         else:
@@ -121,6 +122,8 @@ class MainWindow(QWidget):
                                      QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print('clear textbox')
+            self.remove_temp_files()
+            self.check_btn.setEnabled(False)
             self.textbox.clear()
         elif reply == QMessageBox.No:
             print('do not want to clear textbox')
@@ -132,10 +135,16 @@ class MainWindow(QWidget):
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
+            self.remove_temp_files()
             event.accept()
         else:
             print('Pretend to close :)')
             event.ignore()
+
+    def remove_temp_files(self):
+        for path in (self.temp_docx_path, self.temp_pdf_path):
+            if os.path.exists(path):
+                os.remove(path)
 
     def create_grid_layout(self):
         grid = QGridLayout()

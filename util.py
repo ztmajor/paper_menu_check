@@ -12,12 +12,21 @@ import win32com.client
 from win32com.client import Dispatch, constants
 import docx
 import fitz
-import pydoc_data
+import os
+import pythoncom
+
+
+def get_word_com():
+    try:
+        doc_com = Dispatch('kwps.Application')
+    except pythoncom.com_error:
+        doc_com = Dispatch('Word.Application')
+
+    return doc_com
 
 
 def doc2docx(doc_path, docx_path):
-    # doc文件另存为docx
-    doc = win32com.client.Dispatch('kwps.Application')
+    doc = get_word_com()
     doc_file = doc.Documents.Open(doc_path)
     doc_file.SaveAs(docx_path, 12, False, "", True, "", False, False, False, False)  # 转换后的文件,12代表转换后为docx文件
     # doc.SaveAs(r"F:\\***\\***\\appendDoc\\***.docx", 12) # 或直接简写
@@ -32,7 +41,8 @@ def read_docx(docx_path):
 
 def doc2pdf(doc_file, pdf_file):
     wdFormatPDF = 17
-    word = Dispatch('kwps.Application')
+    # word = Dispatch('kwps.Application')
+    word = get_word_com()
     doc = word.Documents.Open(doc_file)
     doc.SaveAs(pdf_file, FileFormat=wdFormatPDF)
     doc.Close()
@@ -95,11 +105,128 @@ def check_footer(pdf, docx):
 
 
 
+def collect_infos(pdf_document, catalog_prefix=""):
+    catalog_info, body_text_info, name_catalog = [],[], {}
+    next_chapter, cur_page = 1, -1
+    cur_chapter_text = f"第{next_chapter}章"
+
+    for page in pdf_document:
+        lines_str = page.getText().split("\n")
+        for i in range(len(lines_str)):
+            line = lines_str[i].strip()
+            if line.isdigit() and i < 5:
+                cur_page = int(line)
+
+            infos = [item.strip() for item in line.split(' ') if item.strip()]
+            if cur_page > 0 and i > 2:
+                strip_line = ''.join(infos)
+                if cur_chapter_text in strip_line:
+                    next_chapter += 1
+                    cur_chapter_text = f"第{next_chapter}章"
+
+            if line.startswith(catalog_prefix) is False:
+                continue
+
+            if infos[0].strip() == catalog_prefix:
+                # 检查该行第一个字是否是 指定的目录前缀，检查省略号（不一定是这种省略号）？
+                if '...' in infos[-2]:
+                    cur_id, cur_name, page_num = infos[1], ''.join(infos[2:-2]), infos[-1]
+                    # strip_name = catalog_prefix+cur_id+cur_name
+                    # print(infos, cur_name)
+                    cur_index = len(catalog_info)
+                    catalog_info.append({
+                        'id': cur_id,
+                        'page_num': page_num,
+                        'name': cur_name,
+                        'ori_line': line
+                    })
+                    name_catalog[cur_name] = cur_index
+                elif not (infos[-1].endswith('：') or infos[-1].endswith('。')):
+                    cur_id, cur_name = infos[1], ''.join(infos[2:])
+                    # print(infos, next_chapter-1, cur_page, line, cur_name)
+                    # strip_name = catalog_prefix + cur_id + cur_name
+                    body_text_info.append({
+                        'id': cur_id,
+                        'page_num': cur_page,
+                        'chapter': next_chapter-1,
+                        'name': cur_name,
+                        'ori_line': line
+                    })
+
+    return catalog_info, name_catalog, body_text_info
+
+
+def check_catalog_info(catalog_info):
+    # id递增错误
+    wrong_id_logs = []
+    # 找不到页码
+    wrong_page_num = []
+    cur_chapter, cur_index, cur_page = 0, 1, 0
+    for info in catalog_info:
+        ids = info['id'].split('.')
+        if cur_chapter != int(ids[0]):
+            cur_chapter = int(ids[0])
+            cur_index = 0
+
+        cur_index += 1
+        # todo: 此处转int很可能抛异常
+        if cur_index != int(ids[1]):
+            wrong_id_logs.append(
+                f"目录中id不按序递增：{info['ori_line']}")
+
+        if info['page_num'].isdigit() is False:
+            wrong_page_num.append(
+                f"目录中未显示页码：{info['ori_line']}")
+
+    return wrong_id_logs + wrong_page_num
+
+
+def check_catalog(pdf_file, catalog_prefix=""):
+    # 收集不同的错误日志并返回
+    check_logs = [f"开始检查{catalog_prefix}目录..."]
+    with fitz.open(pdf_file) as pdf_document:
+        catalog_info, name_catalog, body_text_info = collect_infos(pdf_document, catalog_prefix)
+        if len(catalog_info) == 0:
+            return check_logs + [f"{catalog_prefix}目录未找到！"]
+
+        # 检查目录页，判断id升序和页码信息
+        check_logs += check_catalog_info(catalog_info)
+
+        # 记录所在章节错误信息
+        wrong_chapter_logs = []
+        # id和目录中的不一致
+        wrong_id_logs = []
+        # 目录中页码错误
+        wrong_page_num_logs = []
+
+        # 遍历全文检查图表实际位置
+        for info in body_text_info:
+            # print(info)
+            if int(info['id'].split('.')[0]) != info['chapter']:
+                wrong_chapter_logs.append(
+                    f"章节和id不对应：第{info['page_num']}页中的 {info['ori_line']} 所在章节为 {info['chapter']}.")
+
+            # todo: 有重名的图？
+            if info['name'] in name_catalog:
+                catalog_data = catalog_info[name_catalog[info['name']]]
+                if catalog_data['id'] != info['id']:
+                    wrong_id_logs.append(
+                        f"id与目录中的不一致: 第{info['page_num']}页中的 {info['ori_line']}，目录中id为{catalog_data['id']}.")
+                if catalog_data['page_num'] != str(info['page_num']):
+                    wrong_page_num_logs.append(
+                        f"目录中页码错误: 第{info['page_num']}页中的 {info['ori_line']}，目录中页码为{catalog_data['page_num']}.")
+
+    check_logs += wrong_chapter_logs
+    check_logs += wrong_id_logs
+    check_logs += wrong_page_num_logs
+    check_logs.append("检查完毕。")
+    return check_logs
+
+
 if __name__ == '__main__':
-    # 这里只能使用完整绝对地址，相对地址找不到文件，且，只能用“\\”，不能用“/”，哪怕加了 r 也不行，涉及到将反斜杠看成转义字符。
-    doc_path = r'W:\ZJU\课程\春学期\写作指导\作业\hw\paper\硕士学位论文正文_1.doc'
-    docx_path = r'C:\\Users\\xieyu\\Desktop\\jupyter project\\论文课程作业\\硕士学位论文正文_1.docx'
-    pdf_path = r'C:\\Users\\xieyu\\Desktop\\jupyter project\\论文课程作业\\硕士学位论文正文_1.pdf'
+    doc_path = os.getcwd() + '/paper/硕士学位论文正文_1.doc'
+    pdf_path = doc_path.replace('doc', 'pdf')
+    docx_path = doc_path.replace('doc', 'docx')
     # doc2docx(doc_path, docx_path)
     # for p in docx_file.paragraphs:
     #     print(p.text)
