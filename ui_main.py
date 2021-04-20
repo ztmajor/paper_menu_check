@@ -8,11 +8,13 @@
 """
 import sys
 import os
+
 from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QTextEdit, QLabel,
                              QPushButton, QApplication, QMainWindow, QAction, qApp, QHBoxLayout, QVBoxLayout,
                              QGridLayout, QFileDialog, QLineEdit, QTextBrowser)
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QFont, QIcon, QColor
 from PyQt5.QtCore import QCoreApplication, pyqtSlot
+
 
 from util import *
 
@@ -33,7 +35,7 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         # 窗口在屏幕上显示，并设置了它的尺寸。resize()和remove()合而为一的方法。
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setWindowIcon(QIcon(r'W:\ZJU\课程\春学期\写作指导\作业\hw\pic\paper.png'))  # 创建一个QIcon对象并接收一个我们要显示的图片路径作为参数。
+        self.setWindowIcon(QIcon(os.getcwd() + '/pic/paper.png'))  # 创建一个QIcon对象并接收一个我们要显示的图片路径作为参数。
 
         # open button
         self.open_btn = QPushButton('Open', self)
@@ -57,6 +59,7 @@ class MainWindow(QWidget):
 
         self.textbox = QTextEdit(self)
         self.textbox.setReadOnly(True)
+        self.textbox.document().setMaximumBlockCount(100)
         # self.textbox.move(50, 50)
         # self.textbox.resize(380, 150)
 
@@ -66,7 +69,7 @@ class MainWindow(QWidget):
     def open_file_name_dialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+        fileName, _ = QFileDialog.getOpenFileName(self, "open doc file", "",
                                                   "Doc Files (*.doc)", options=options)
         if fileName:
             print(fileName)
@@ -76,19 +79,28 @@ class MainWindow(QWidget):
     def open_slot_method(self):
         print('open method called.')
         doc_file = self.open_file_name_dialog()
-        self.temp_docx_path = doc_file.replace('.doc', '.docx')
-        self.temp_pdf_path = doc_file.replace('.doc', '.pdf')
-        self.textbox.append(f'Open {doc_file}')
-        self.print_log('processing...')
-        self.remove_temp_files()
+        temp_path = os.getcwd() + "/temp/"
+        if not os.path.exists(temp_path):
+            os.mkdir(temp_path)
+
+        temp_path = temp_path + doc_file.split('/')[-1]
+        self.temp_docx_path = temp_path.replace('.doc', '.docx')
+        self.temp_pdf_path = temp_path.replace('.doc', '.pdf')
+        print(self.temp_docx_path, self.temp_pdf_path)
+        self.print_log(f'打开文件： {doc_file}', 'blue')
+        self.print_log('检查是否需要转换成易检查的格式...')
         self.check_btn.setEnabled(False)
         try:
-            # doc2docx(doc_file, self.temp_docx_path)
-            doc2pdf(doc_file, self.temp_pdf_path)
-            self.print_log('processing complete.')
+            if not os.path.exists(self.temp_docx_path):
+                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'yellow')
+                QApplication.processEvents()
+                doc2docx(doc_file, self.temp_docx_path)
+                doc2pdf(doc_file, self.temp_pdf_path)
+
+            self.print_log('文件转换成功，可以开始检查。', 'green')
             self.check_btn.setEnabled(True)
         except:
-            self.print_log('process file error!')
+            self.print_log('文件转换失败！', 'red')
             pass
 
     @pyqtSlot()
@@ -100,13 +112,8 @@ class MainWindow(QWidget):
                                      QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print('let us check!')
-
-            # TODO: doing sth
-            msg_list = check_catalog(self.temp_pdf_path, '图')
-            msg_list += check_catalog(self.temp_pdf_path, '表')
-            for msg in msg_list:
-                self.print_log(str(msg))
-            self.print_log('check complete.')
+            self.check('图')
+            self.check('表')
 
         elif reply == QMessageBox.No:
             print('do not check')
@@ -122,7 +129,6 @@ class MainWindow(QWidget):
                                      QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             print('clear textbox')
-            self.remove_temp_files()
             self.check_btn.setEnabled(False)
             self.textbox.clear()
         elif reply == QMessageBox.No:
@@ -135,16 +141,20 @@ class MainWindow(QWidget):
                                      QMessageBox.Yes | QMessageBox.No,
                                      QMessageBox.No)
         if reply == QMessageBox.Yes:
-            self.remove_temp_files()
             event.accept()
         else:
             print('Pretend to close :)')
             event.ignore()
 
-    def remove_temp_files(self):
-        for path in (self.temp_docx_path, self.temp_pdf_path):
-            if os.path.exists(path):
-                os.remove(path)
+    def check(self, catalog_prefix='图'):
+        self.print_log(f"开始检查{catalog_prefix}目录...")
+        msg_list = check_catalog(self.temp_pdf_path, catalog_prefix)
+        if len(msg_list) == 0:
+            self.print_log(f"{catalog_prefix}目录检查完毕，未发现错误。\n", 'green')
+        else:
+            for msg in msg_list:
+                self.print_log(str(msg), 'red')
+            self.print_log(f"{catalog_prefix}目录检查完毕。\n")
 
     def create_grid_layout(self):
         grid = QGridLayout()
@@ -157,9 +167,10 @@ class MainWindow(QWidget):
 
         self.setLayout(grid)
 
-    def print_log(self, massage):
-        print(massage)
+    def print_log(self, massage, color='black'):
+        self.textbox.setTextColor(QColor(color))
         self.textbox.append(massage)
+        print(massage)
 
 
 if __name__ == '__main__':
