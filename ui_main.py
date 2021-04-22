@@ -73,12 +73,17 @@ class MainWindow(QWidget):
                                                   "Doc Files (*.doc)", options=options)
         if fileName:
             print(fileName)
-        return fileName
+            return fileName
+
+        return
 
     @pyqtSlot()
     def open_slot_method(self):
         print('open method called.')
         doc_file = self.open_file_name_dialog()
+        if doc_file is None:
+            self.print_log('未选中文件，请重新打开要检查的文件。', 'blue')
+            return
         temp_path = os.getcwd() + "/temp/"
         if not os.path.exists(temp_path):
             os.mkdir(temp_path)
@@ -92,7 +97,7 @@ class MainWindow(QWidget):
         self.check_btn.setEnabled(False)
         try:
             if not os.path.exists(self.temp_docx_path):
-                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'yellow')
+                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'blue')
                 QApplication.processEvents()
                 doc2docx(doc_file, self.temp_docx_path)
                 doc2pdf(doc_file, self.temp_pdf_path)
