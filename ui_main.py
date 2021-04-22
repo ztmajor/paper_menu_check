@@ -89,7 +89,6 @@ class MainWindow(QWidget):
             self.print_log('process file error!')
             pass
 
-
     @pyqtSlot()
     def check_slot_method(self):
         print('click test')
