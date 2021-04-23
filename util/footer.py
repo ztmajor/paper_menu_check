@@ -7,7 +7,7 @@
 """
 import os
 import fitz
-from util.util import *
+from util import *
 
 
 def find_page_number(pdf_file, keyword):
@@ -71,7 +71,7 @@ def check_footer(pdf, docx):
 
 
 if __name__ == '__main__':
-    doc_path = os.getcwd() + '/paper/硕士学位论文正文_1.doc'
+    doc_path = os.getcwd() + '/../paper/硕士学位论文正文_1.doc'
     pdf_path = doc_path.replace('doc', 'pdf')
     docx_path = doc_path.replace('doc', 'docx')
     msg = check_footer(pdf_path, docx_path)

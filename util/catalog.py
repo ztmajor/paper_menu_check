@@ -9,6 +9,8 @@ import os
 import fitz
 import docx
 
+from util import *
+
 
 def collect_infos(pdf_document, catalog_prefix=""):
     catalog_info, body_text_info, name_catalog = [], [], {}
