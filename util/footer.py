@@ -26,13 +26,12 @@ def find_page_number(pdf_file, keyword):
 
 
 def check_alignment(docx_file):
-    roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
     all_good = True
     document = docx.Document(docx_file)
     for section in document.sections:
         for parg in section.footer.paragraphs:
-            if parg.text:
-                if parg.text in roma_nums_uppercase:
+            if '目录' in section.header.paragraphs[0].text:
+                if parg.text:
                     if str(parg.alignment) != 'CENTER (1)':
                         print('页码 {} 未居中'.format(parg.text))
                         all_good = False
