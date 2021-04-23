@@ -1,105 +1,13 @@
 # encoding: utf-8
-from os import remove
-from os.path import splitext
-import win32com.client
-from win32com.client import Dispatch, constants
-import docx
-import fitz
+"""
+@author: zeng zonghai
+@software: PyCharm
+@file: catalog.py
+@time: 2021/4/23 19:45
+"""
 import os
-import pythoncom
-
-
-def get_word_com():
-    try:
-        doc_com = Dispatch('kwps.Application')
-    except pythoncom.com_error:
-        doc_com = Dispatch('Word.Application')
-
-    return doc_com
-
-
-def doc2docx(doc_path, docx_path):
-    doc = get_word_com()
-    doc_file = doc.Documents.Open(doc_path)
-    doc_file.SaveAs(docx_path, 12, False, "", True, "", False, False, False, False)  # 转换后的文件,12代表转换后为docx文件
-    # doc.SaveAs(r"F:\\***\\***\\appendDoc\\***.docx", 12) # 或直接简写
-    # 注意SaveAs会打开保存后的文件，有时可能看不到，但后台一定是打开的
-    doc_file.Close()
-    doc.Quit()
-
-
-def read_docx(docx_path):
-    return docx.Document(docx_path)
-
-
-def doc2pdf(doc_file, pdf_file):
-    wdFormatPDF = 17
-    # word = Dispatch('kwps.Application')
-    word = get_word_com()
-    doc = word.Documents.Open(doc_file)
-    doc.SaveAs(pdf_file, FileFormat=wdFormatPDF)
-    doc.Close()
-    word.Quit()
-
-
-def find_page_number(pdf_file, keyword):
-    page_list = []
-    with fitz.open(pdf_file) as doc:
-        for idx, page in enumerate(doc, start=1):
-            if keyword in page.getText():
-                # print(f"page {idx} include keyword {keyword}!!")
-                page_list.append(idx)
-    return page_list
-
-
-def check_alignment(docx_file):
-    check_msg = []
-    roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-    document = docx.Document(docx_file)
-    for section in document.sections:
-        for parg in section.footer.paragraphs:
-            if parg.text:
-                if parg.text in roma_nums_uppercase:
-                    if str(parg.alignment) != 'CENTER (1)':
-                        # print('页码 {} 未居中'.format(parg.text))
-                        check_msg.append('页码 {} 未居中'.format(parg.text))
-    return check_msg
-
-
-def check_footer_nums(pdf_file, start_page, end_page):
-    roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
-    check_msg = []
-    with fitz.open(pdf_file) as doc:
-        for idx, page in enumerate(doc, start=1):
-                if start_page <= idx < end_page:
-                    cur_footer = roma_nums_uppercase[idx-start_page]
-                    if '图目录' in page.getText():
-                        cur_sec = '图目录'
-                    elif '表目录' in page.getText():
-                        cur_sec = '表目录'
-                    elif '目录' in page.getText():
-                        cur_sec = '目录'
-                    if cur_footer in page.getText():
-                        # print("{} 页码：{}".format(cur_sec, cur_footer))
-                        check_msg.append("{} 页码：{}".format(cur_sec, cur_footer))
-                    else:
-                        # print("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
-                        check_msg.append("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
-    return check_msg
-
-
-def check_footer(pdf, docx):
-    '''
-    不检查是否存在目录、表目录、图目录，默认都存在
-    :param pdf: pdf file path
-    :param docx: docx file path
-    :return: None
-    '''
-    stand_page_list = find_page_number(pdf, '目录')
-    p_list = find_page_number(pdf, '第 1 章')
-    footer_num_msg = check_footer_nums(pdf, min(stand_page_list), min(p_list))
-    alignment_msg = check_alignment(docx)
-    return footer_num_msg + alignment_msg
+import fitz
+import docx
 
 
 def collect_infos(pdf_document, catalog_prefix=""):
@@ -403,6 +311,3 @@ if __name__ == '__main__':
     # stand_page_list = find_page_number(pdf_path, '目录')
     # p_list = find_page_number(pdf_path, '第 1 章')
     # print('final page:', max(p_list) - min(stand_page_list) + 1)
-    msg = []
-    msg = check_footer(pdf_path, docx_path)
-    print(msg)

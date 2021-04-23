@@ -16,7 +16,7 @@ from PyQt5.QtGui import QFont, QIcon, QColor
 from PyQt5.QtCore import QCoreApplication, pyqtSlot
 
 
-from util import *
+from util import doc2pdf, doc2docx, check_catalog, check_footer
 
 
 class MainWindow(QWidget):

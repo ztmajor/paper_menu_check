@@ -6,17 +6,15 @@
 @file: ui_main.py
 @time: 2021/4/16 8:53
 """
-import sys
 import os
+import sys
 
-from PyQt5.QtWidgets import (QWidget, QToolTip, QDesktopWidget, QMessageBox, QTextEdit, QLabel,
-                             QPushButton, QApplication, QMainWindow, QAction, qApp, QHBoxLayout, QVBoxLayout,
-                             QGridLayout, QFileDialog, QLineEdit, QTextBrowser)
+from PyQt5.QtWidgets import (QWidget, QToolTip, QMessageBox, QTextEdit, QPushButton, QApplication, QGridLayout, QFileDialog)
 from PyQt5.QtGui import QFont, QIcon, QColor
-from PyQt5.QtCore import QCoreApplication, pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 
 
-from util import *
+from util.util import *
 
 
 class MainWindow(QWidget):
