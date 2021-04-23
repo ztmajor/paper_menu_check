@@ -7,6 +7,8 @@
 """
 import os
 import fitz
+import docx
+
 from util import *
 
 
