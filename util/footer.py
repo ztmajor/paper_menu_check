@@ -23,39 +23,46 @@ def find_page_number(pdf_file, keyword):
 
 
 def check_alignment(docx_file):
+    all_good = True
     check_msg = []
-    roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
     document = docx.Document(docx_file)
     for section in document.sections:
         for parg in section.footer.paragraphs:
             if parg.text:
-                if parg.text in roma_nums_uppercase:
-                    if str(parg.alignment) != 'CENTER (1)':
-                        # print('页码 {} 未居中'.format(parg.text))
-                        check_msg.append('页码 {} 未居中'.format(parg.text))
+                if str(parg.alignment) != 'CENTER (1)':
+                    # print('页码 {} 未居中'.format(parg.text))
+                    check_msg.append('页码 {} 未居中'.format(parg.text))
+                    all_good = False
+    if all_good:
+        check_msg.append('目录页码已全部居中')
     return check_msg
 
 
 def check_footer_nums(pdf_file, start_page, end_page):
     roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
+    all_good = True
     check_msg = []
     with fitz.open(pdf_file) as doc:
         for idx, page in enumerate(doc, start=1):
-                if start_page <= idx < end_page:
-                    cur_footer = roma_nums_uppercase[idx-start_page]
-                    if '图目录' in page.getText():
-                        cur_sec = '图目录'
-                    elif '表目录' in page.getText():
-                        cur_sec = '表目录'
-                    elif '目录' in page.getText():
-                        cur_sec = '目录'
-                    if cur_footer in page.getText():
-                        # print("{} 页码：{}".format(cur_sec, cur_footer))
-                        check_msg.append("{} 页码：{}".format(cur_sec, cur_footer))
-                    else:
-                        # print("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
-                        check_msg.append("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
-    return check_msg
+            if start_page <= idx < end_page:
+                cur_footer = roma_nums_uppercase[idx-start_page]
+                if '图目录' in page.getText():
+                    cur_sec = '图目录'
+                elif '表目录' in page.getText():
+                    cur_sec = '表目录'
+                elif '目录' in page.getText():
+                    cur_sec = '目录'
+
+                data = [item.strip('\n') for item in page.getText().split(' ')]
+
+                if cur_footer in data:
+                    # print("{} 页码：{}".format(cur_sec, cur_footer))
+                    check_msg.append("{} 页码：{}".format(cur_sec, cur_footer))
+                else:
+                    # print("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
+                    check_msg.append("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
+                    all_good = False
+    return all_good, check_msg
 
 
 def check_footer(pdf, docx):
@@ -67,8 +74,12 @@ def check_footer(pdf, docx):
     '''
     stand_page_list = find_page_number(pdf, '目录')
     p_list = find_page_number(pdf, '第 1 章')
-    footer_num_msg = check_footer_nums(pdf, min(stand_page_list), min(p_list))
-    alignment_msg = check_alignment(docx)
+    flag, footer_num_msg = check_footer_nums(pdf, min(stand_page_list), min(p_list))
+    alignment_msg = []
+    if flag:
+        alignment_msg = check_alignment(docx)
+    else:
+        alignment_msg.append('请修改错误的页码')
     return footer_num_msg + alignment_msg
 
 
