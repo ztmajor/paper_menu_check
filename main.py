@@ -16,7 +16,7 @@ from PyQt5.QtGui import QFont, QIcon, QColor
 from PyQt5.QtCore import QCoreApplication, pyqtSlot
 
 
-from util import doc2pdf, doc2docx, check_catalog, check_footer
+from util import check_catalog, check_footer, gif_loading, transfer_thread
 
 
 class MainWindow(QWidget):
@@ -26,6 +26,8 @@ class MainWindow(QWidget):
         self.left, self.top, self.width, self.height = 300, 300, 480, 270
         self.temp_docx_path = None
         self.temp_pdf_path = None
+        self.loading = None
+        self.back_file_transfer_thread = None
         self.initUI()
 
     def initUI(self):
@@ -90,20 +92,33 @@ class MainWindow(QWidget):
         self.print_log(f'打开文件： {doc_file}', 'blue')
         self.print_log('检查是否需要转换成易检查的格式...')
         self.check_btn.setEnabled(False)
-        try:
-            if not os.path.exists(self.temp_docx_path) or not os.path.exists(self.temp_pdf_path):
-                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'blue')
-                QApplication.processEvents()
-                if not os.path.exists(self.temp_docx_path):
-                    doc2docx(doc_file, self.temp_docx_path)
-                if not os.path.exists(self.temp_pdf_path):
-                    doc2pdf(doc_file, self.temp_pdf_path)
+        if not os.path.exists(self.temp_docx_path) or not os.path.exists(self.temp_pdf_path):
+            self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'blue')
+            QApplication.processEvents()
 
-            self.print_log('文件转换成功，可以开始检查。', 'green')
-            self.check_btn.setEnabled(True)
-        except:
-            self.print_log('文件转换失败！', 'red')
-            pass
+            self.back_file_transfer_thread = transfer_thread.BackFileTransferQthread()
+            self.back_file_transfer_thread.set_path(doc_file, self.temp_docx_path, self.temp_pdf_path)
+            self.back_file_transfer_thread.transfer_error.connect(self.handle_file_transfer_error)
+            self.back_file_transfer_thread.task_done.connect(self.handle_file_transfer_done)
+
+            self.loading = gif_loading.GifLoading(self, os.getcwd() + '/img/loading.gif')
+            self.loading.show()
+
+            self.back_file_transfer_thread.start()
+        else:
+            self.transfer_done()
+
+    def handle_file_transfer_error(self, err_log):
+        self.loading.close()
+        self.print_log(err_log, 'red')
+
+    def handle_file_transfer_done(self):
+        self.loading.close()
+        self.transfer_done()
+
+    def transfer_done(self):
+        self.print_log('文件转换成功，可以开始检查。', 'green')
+        self.check_btn.setEnabled(True)
 
     @pyqtSlot()
     def check_slot_method(self):
