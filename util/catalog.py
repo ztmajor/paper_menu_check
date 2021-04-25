@@ -21,6 +21,7 @@ def collect_infos(pdf_document, catalog_prefix=""):
     def extraId(text):
         return ''.join([i for i in text if i.isdigit() or i == '.'])
 
+    line_infos = []
     for page in pdf_document:
         lines_str = page.getText().split("\n")
         for i in range(len(lines_str)):
@@ -36,13 +37,24 @@ def collect_infos(pdf_document, catalog_prefix=""):
                     next_chapter += 1
                     cur_chapter_text = f"第{next_chapter}章"
 
-            if line.startswith(catalog_prefix) is False:
+            if line.startswith(catalog_prefix) is False and len(line_infos) == 0:
                 continue
 
-            if infos[0].strip() == catalog_prefix:
+            if len(line_infos) or infos[0].strip() == catalog_prefix:
+                line_infos += infos
+
+            if len(line_infos) >= 3 and line_infos[0].strip() == catalog_prefix:
                 # 检查该行第一个字是否是 指定的目录前缀，检查省略号（不一定是这种省略号）？
-                if '..' in infos[-2]:
-                    cur_id, cur_name, page_num = infos[1], ''.join(infos[2:-2]), infos[-1]
+                if '..' in line_infos[-2] or '..' in line_infos[-1]:
+                    cur_id, cur_name, page_num = line_infos[1], ''.join(line_infos[2:-2]), line_infos[-1]
+                    if cur_name == '':
+                        temp_name = line_infos[-2] if '..' in line_infos[-2] else line_infos[-1]
+                        for c in temp_name:
+                            if c == '.':
+                                break
+                            else:
+                                cur_name += c
+
                     strip_name = catalog_prefix+cur_id+cur_name
                     # print(infos, cur_name, strip_name)
                     cur_index = len(catalog_info)
@@ -54,7 +66,7 @@ def collect_infos(pdf_document, catalog_prefix=""):
                     })
                     name_catalog[strip_name] = cur_index
                 elif not (line.endswith("：") or line.endswith("。")):
-                    cur_id, cur_name = infos[1], ''.join(infos[2:])
+                    cur_id, cur_name = line_infos[1], ''.join(line_infos[2:])
                     # print(infos, next_chapter-1, cur_page, cur_name, lines_str[i], len(lines_str[i]))
                     strip_name = catalog_prefix + cur_id + cur_name
                     text_info = {
@@ -70,6 +82,8 @@ def collect_infos(pdf_document, catalog_prefix=""):
                         cur_index = len(body_text_info)
                         body_text_info.append(text_info)
                         caption_id_index[cur_id] = cur_index
+
+                line_infos = []
 
     return catalog_info, name_catalog, body_text_info
 
