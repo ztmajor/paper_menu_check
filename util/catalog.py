@@ -12,14 +12,48 @@ import docx
 from util import *
 
 
+def extra_id(text_id):
+    return ''.join([i for i in text_id if i.isdigit() or i == '.'])
+
+
+def format_catalog_info(catalog_prefix, line, line_infos):
+    cur_id, cur_name, page_num = line_infos[1], ''.join(line_infos[2:-2]), line_infos[-1]
+    if cur_name == '':
+        temp_name = line_infos[-2] if '..' in line_infos[-2] else line_infos[-1]
+        for c in temp_name:
+            if c == '.':
+                break
+            else:
+                cur_name += c
+
+    strip_name = catalog_prefix + cur_id + cur_name
+    catalog_info = {
+        'id': extra_id(cur_id),
+        'page_num': page_num,
+        'name': strip_name,
+        'ori_line': line
+    }
+    return catalog_info
+
+
+def format_text_info(catalog_prefix, line, line_infos, cur_page, chapter):
+    cur_id, cur_name = line_infos[1], ''.join(line_infos[2:])
+    strip_name = catalog_prefix + cur_id + cur_name
+    text_info = {
+        'id': extra_id(cur_id),
+        'page_num': cur_page,
+        'chapter': chapter,
+        'name': strip_name,
+        'ori_line': line
+    }
+    return text_info
+
+
 def collect_infos(pdf_document, catalog_prefix=""):
     catalog_info, body_text_info, name_catalog = [], [], {}
     caption_id_index = {}
     next_chapter, cur_page = 1, -1
     cur_chapter_text = f"第{next_chapter}章"
-
-    def extraId(text):
-        return ''.join([i for i in text if i.isdigit() or i == '.'])
 
     line_infos = []
     for page in pdf_document:
@@ -37,6 +71,7 @@ def collect_infos(pdf_document, catalog_prefix=""):
                     next_chapter += 1
                     cur_chapter_text = f"第{next_chapter}章"
 
+            # 兼容wps和office转换成的pdf
             if line.startswith(catalog_prefix) is False and len(line_infos) == 0:
                 continue
 
@@ -44,38 +79,16 @@ def collect_infos(pdf_document, catalog_prefix=""):
                 line_infos += infos
 
             if len(line_infos) >= 3 and line_infos[0].strip() == catalog_prefix:
-                # 检查该行第一个字是否是 指定的目录前缀，检查省略号（不一定是这种省略号）？
+                # 检查该行第一个字是否是 指定的目录前缀，检查省略号
                 if '..' in line_infos[-2] or '..' in line_infos[-1]:
-                    cur_id, cur_name, page_num = line_infos[1], ''.join(line_infos[2:-2]), line_infos[-1]
-                    if cur_name == '':
-                        temp_name = line_infos[-2] if '..' in line_infos[-2] else line_infos[-1]
-                        for c in temp_name:
-                            if c == '.':
-                                break
-                            else:
-                                cur_name += c
-
-                    strip_name = catalog_prefix+cur_id+cur_name
-                    # print(infos, cur_name, strip_name)
                     cur_index = len(catalog_info)
-                    catalog_info.append({
-                        'id': extraId(cur_id),
-                        'page_num': page_num,
-                        'name': strip_name,
-                        'ori_line': line
-                    })
-                    name_catalog[strip_name] = cur_index
+                    cur_catalog = format_catalog_info(catalog_prefix, line, line_infos)
+                    catalog_info.append(cur_catalog)
+                    name_catalog[cur_catalog['name']] = cur_index
+
                 elif not (line.endswith("：") or line.endswith("。")):
-                    cur_id, cur_name = line_infos[1], ''.join(line_infos[2:])
-                    # print(infos, next_chapter-1, cur_page, cur_name, lines_str[i], len(lines_str[i]))
-                    strip_name = catalog_prefix + cur_id + cur_name
-                    text_info = {
-                            'id': extraId(cur_id),
-                            'page_num': cur_page,
-                            'chapter': next_chapter-1,
-                            'name': strip_name,
-                            'ori_line': line
-                        }
+                    text_info = format_text_info(catalog_prefix, line, line_infos, cur_page, next_chapter-1)
+                    cur_id = text_info['id']
                     if cur_id in caption_id_index:
                         body_text_info[caption_id_index[cur_id]] = text_info
                     else:
@@ -101,7 +114,6 @@ def check_catalog_info(catalog_info):
             cur_index = 0
 
         cur_index += 1
-        # todo: 此处转int很可能抛异常
         if cur_index != int(ids[1]):
             wrong_id_logs.append(
                 f"目录中id不按序递增：{info['ori_line']}")
