@@ -91,11 +91,13 @@ class MainWindow(QWidget):
         self.print_log('检查是否需要转换成易检查的格式...')
         self.check_btn.setEnabled(False)
         try:
-            if not os.path.exists(self.temp_docx_path):
-                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'yellow')
+            if not os.path.exists(self.temp_docx_path) or not os.path.exists(self.temp_pdf_path):
+                self.print_log('第一次检查该文件，需要进行转换，请稍等片刻...', 'blue')
                 QApplication.processEvents()
-                doc2docx(doc_file, self.temp_docx_path)
-                doc2pdf(doc_file, self.temp_pdf_path)
+                if not os.path.exists(self.temp_docx_path):
+                    doc2docx(doc_file, self.temp_docx_path)
+                if not os.path.exists(self.temp_pdf_path):
+                    doc2pdf(doc_file, self.temp_pdf_path)
 
             self.print_log('文件转换成功，可以开始检查。', 'green')
             self.check_btn.setEnabled(True)
