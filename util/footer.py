@@ -59,10 +59,10 @@ def check_footer_nums(pdf_file, start_page, end_page):
                 data = [item.strip('\n') for item in page.getText().split(' ')]
 
                 if cur_footer in data:
-                    # print("{} 页码：{}".format(cur_sec, cur_footer))
+                    print("{} 页码：{}".format(cur_sec, cur_footer))
                     check_msg.append("{} 页码：{}".format(cur_sec, cur_footer))
                 else:
-                    # print("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
+                    print("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
                     check_msg.append("{} 缺少页码：{} 或者页码格式非大写罗马字符".format(cur_sec, cur_footer))
                     all_good = False
     return all_good, check_msg
@@ -76,7 +76,7 @@ def check_footer(pdf, docx):
     :return: None
     '''
     stand_page_list = find_page_number(pdf, '目录')
-    p_list = find_page_number(pdf, '第 1 章')
+    p_list = find_page_number(pdf, '第1章')
     flag, footer_num_msg = check_footer_nums(pdf, min(stand_page_list), min(p_list))
     alignment_msg = []
     if flag:
@@ -87,7 +87,7 @@ def check_footer(pdf, docx):
 
 
 if __name__ == '__main__':
-    doc_path = os.getcwd() + '/../paper/硕士学位论文正文_1.doc'
+    doc_path = r'C:\\Users\\xieyu\\Desktop\\jupyter project\\论文课程作业\\需要检查的论文\\硕士学位论文正文_4.doc'
     pdf_path = doc_path.replace('doc', 'pdf')
     docx_path = doc_path.replace('doc', 'docx')
     msg = check_footer(pdf_path, docx_path)
