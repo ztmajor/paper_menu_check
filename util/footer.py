@@ -42,16 +42,19 @@ def check_footer_nums(pdf_file, start_page, end_page):
     roma_nums_uppercase = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
     all_good = True
     check_msg = []
+    cur_pos = 0
     with fitz.open(pdf_file) as doc:
         for idx, page in enumerate(doc, start=1):
             if start_page <= idx < end_page:
                 cur_footer = roma_nums_uppercase[idx-start_page]
-                if '图目录' in page.getText():
+                if '图目录' in page.getText() and cur_pos == 1:
                     cur_sec = '图目录'
-                elif '表目录' in page.getText():
+                    cur_pos = 2
+                elif '表目录' in page.getText() and cur_pos == 2:
                     cur_sec = '表目录'
                 elif '目录' in page.getText():
                     cur_sec = '目录'
+                    cur_pos = 1
 
                 data = [item.strip('\n') for item in page.getText().split(' ')]
 
